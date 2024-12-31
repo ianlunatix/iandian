@@ -868,7 +868,7 @@ function ins_backup() {
 
   # Konfigurasi Rclone
   printf "q\n" | rclone config
-  wget -q -O /root/.config/rclone/rclone.conf "${REPO}backups/rclone.conf"
+  wget -q -O /root/.config/rclone/rclone.conf "${REPO}backupsdata/rclone.conf"
   if [[ ! -f /root/.config/rclone/rclone.conf ]]; then
     print_error "Gagal mengunduh file konfigurasi Rclone"
     sleep 2
