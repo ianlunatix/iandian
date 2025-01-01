@@ -32,7 +32,7 @@ function con() {
 
   while true; do
   sleep 5
-  data=($(cat /etc/xray/config.json | grep '^###' | cut -d ' ' -f 2 | sort | uniq))
+  data=($(cat /etc/xray/vme.json | grep '^###' | cut -d ' ' -f 2 | sort | uniq))
   if [[ ! -e /etc/limit/vmess ]]; then
   mkdir -p /etc/limit/vmess
   fi
@@ -71,9 +71,9 @@ for user in ${data[@]}
       total=$(con ${Usage})
       total2=$(con ${checkLimit})
       if [[ ${Usage} -gt ${checkLimit} ]]; then
-      exp=$(grep -w "^### $user" "/etc/xray/config.json" | cut -d ' ' -f 3 | sort | uniq)
-      sed -i "/^### $user $exp/,/^},{/d" /etc/xray/config.json
-      sed -i "/^### $user $exp/d" /etc/vmess/.vmess.db
+      exp=$(grep -w "^### $user" "/etc/xray/vme.json" | cut -d ' ' -f 3 | sort | uniq)
+      sed -i "/^### $user $exp/,/^},{/d" /etc/xray/vme.json
+      sed -i "/^### $user $exp/d" /etc/lunatic/vmess/.vmess.db
       send-log
       rm -rf /etc/limit/vmess/${user}
       rm -f /etc/lunatic/vmess/ip/$user
