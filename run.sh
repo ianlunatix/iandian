@@ -71,6 +71,9 @@ prepare_directories() {
   echo -e "${OK} Menyiapkan direktori..."
   mkdir -p /etc/xray /var/log/xray /var/lib/LT
   touch /etc/xray/ipvps /etc/xray/domain /var/log/xray/access.log /var/log/xray/error.log
+  touch /var/log/xray/accessvle.log /var/log/xray/errorvle.log
+  touch /var/log/xray/accessvme.log /var/log/xray/errorvme.log
+  touch /var/log/xray/accesstro.log /var/log/xray/errortro.log  
   chown www-data:www-data /var/log/xray
   chmod +x /var/log/xray
   echo "$IP" > /etc/xray/ipvps
@@ -169,7 +172,7 @@ install_haproxy() {
       apt-get install -y haproxy=2.4.*
       ;;
     "24.04")
-      echo -e "${OK} Instalasi HAProxy 2.6 untuk ${Green}Ubuntu $VERSION_ID${FONT}..."
+      echo -e "${OK} Instalasi HAProxy 2.9 untuk ${Green}Ubuntu $VERSION_ID${FONT}..."
       apt update -y
       apt-get install --no-install-recommends -y software-properties-common
       add-apt-repository ppa:vbernat/haproxy-2.9 -y
@@ -224,11 +227,11 @@ install_haproxy() {
 
 HAPROXY_INSTALLER() {
   clear
-  print_success "Mulai instalasi HAProxy..."
+  echo -e "\e[92;1m Mulai instalasi HAProxy..."
   detect_os
   first_setup
   install_haproxy
-  print_success "Instalasi HAProxy selesai."
+  echo -e "\e[92;1m Instalasi HAProxy selesai."
 }
 
 HAPROXY_INSTALLER
@@ -240,17 +243,17 @@ function nginx_install() {
   OS_NAME=$(grep -w PRETTY_NAME /etc/os-release | awk -F= '{print $2}' | tr -d '"')
 
   # Cetak status instalasi
-  print_install "Setup nginx untuk OS ${Green}$OS_NAME${FONT}"
+  echo -e "\e[96;1m Setup nginx untuk OS ${Green}$OS_NAME${FONT}"
 
   if [[ "$OS" == "ubuntu" ]]; then
     echo -e "${OK} Menginstal nginx di Ubuntu..."
     apt install nginx -y
-    print_success "Nginx berhasil diinstal pada Ubuntu."
+    echo -e "\e[92;1m Nginx berhasil diinstal pada Ubuntu."
 
   elif [[ "$OS" == "debian" ]]; then
     echo -e "${OK} Menginstal nginx di Debian..."
     apt install nginx -y
-    print_success "Nginx berhasil diinstal pada Debian."
+    echo -e "\e[92;1m Nginx berhasil diinstal pada Debian."
 
   else
     echo -e "${ERROR} OS Anda (${YELLOW}$OS_NAME${FONT}) tidak didukung untuk instalasi nginx."
@@ -260,7 +263,7 @@ function nginx_install() {
 
 function base_package() {
 clear
-print_install "Menginstall Packet Yang Dibutuhkan"
+echo -e "\e[96;1m Menginstall Packet Yang Dibutuhkan \e[0m"
 apt install zip pwgen openssl netcat socat cron bash-completion -y
 apt install figlet -y
 apt update -y
@@ -284,7 +287,7 @@ sudo apt-get install -y --no-install-recommends software-properties-common
 echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
 echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections
 sudo apt-get install -y speedtest-cli vnstat libnss3-dev libnspr4-dev pkg-config libpam0g-dev libcap-ng-dev libcap-ng-utils libselinux1-dev libcurl4-nss-dev flex bison make libnss3-tools libevent-dev bc rsyslog dos2unix zlib1g-dev libssl-dev libsqlite3-dev sed dirmngr libxml-parser-perl build-essential gcc g++ python htop lsof tar wget curl ruby zip unzip p7zip-full python3-pip libc6 util-linux build-essential msmtp-mta ca-certificates bsd-mailx iptables iptables-persistent netfilter-persistent net-tools openssl ca-certificates gnupg gnupg2 ca-certificates lsb-release gcc shc make cmake git screen socat xz-utils apt-transport-https gnupg1 dnsutils cron bash-completion ntpdate chrony jq openvpn easy-rsa
-print_success "Packet Yang Dibutuhkan"
+echo -e "\e[92;1m Packet Yang Dibutuhkan"
 }
 
 function pasang_domain() {
@@ -325,7 +328,7 @@ function pasang_domain() {
       ;;
     *)
       # Pilihan default (domain acak)
-      print_install "Domain/Subdomain Acak akan digunakan."
+      echo -e "\e[96;1m Domain/Subdomain Acak akan digunakan."
       wget ${REPO}domains/cf.sh -O /root/cf.sh && chmod +x /root/cf.sh && /root/cf.sh
       rm -f /root/cf.sh
       ;;
@@ -378,7 +381,7 @@ function restart_system() {
 
 function pasang_ssl() {
   clear
-  print_install "Memasang SSL pada Domain"
+  echo -e "\e[96;1m Memasang SSL pada Domain"
 
   # Hapus file SSL lama
   rm -f /etc/xray/xray.key /etc/xray/xray.crt
@@ -425,7 +428,7 @@ function pasang_ssl() {
 
   if [[ $? -eq 0 ]]; then
     chmod 600 /etc/xray/xray.key /etc/xray/xray.crt
-    print_success "SSL Certificate berhasil dipasang untuk domain $domain"
+    echo -e "\e[92;1m SSL Certificate berhasil dipasang untuk domain $domain"
   else
     print_error "Gagal memasang sertifikat SSL untuk domain $domain."
     exit 1
@@ -501,7 +504,9 @@ function make_folder_xray() {
 
 function install_xray() {
   clear
-  print_install "Memasang Core Xray Versi Terbaru"
+  echo -e "\e[96;1m Memasang Core Xray Versi Terbaru"
+
+  mkdir -p /run/xray
 
   # Direktori untuk domain socket
   domainSock_dir="/run/xray"
@@ -521,8 +526,13 @@ function install_xray() {
   # Instal Xray
   bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install -u www-data --version $latest_version
 
-  # Unduh file konfigurasi
+  # Unduh file konfigurasi config.json
   wget -O /etc/xray/config.json "${REPO}xrayv2ray/config.json" >/dev/null 2>&1
+  
+  # config json only
+  wget -O /etc/xray/vme.json "${REPO}xrayv2ray/vme.json" >/dev/null 2>&1
+  wget -O /etc/xray/vle.json "${REPO}xrayv2ray/vle.json" >/dev/null 2>&1
+  wget -O /etc/xray/tro.json "${REPO}xrayv2ray/tro.json" >/dev/null 2>&1
   wget -O /etc/systemd/system/runn.service "${REPO}xrayv2ray/runn.service" >/dev/null 2>&1
   
   domain=$(cat /etc/xray/domain 2>/dev/null || echo "DomainNotSet")
@@ -541,7 +551,7 @@ function install_xray() {
   IP=$(curl -s ipv4.icanhazip.com)
   
   # Konfigurasi HAProxy dan Nginx
-  print_install "Mengunduh dan Memasang Konfigurasi"
+  echo -e "\e[96;1m Mengunduh dan Memasang Konfigurasi\e[0m"
   wget -O /etc/haproxy/haproxy.cfg "${REPO}xrayv2ray/haproxy.cfg" >/dev/null 2>&1
   wget -O /etc/nginx/conf.d/xray.conf "${REPO}xrayv2ray/xray.conf" >/dev/null 2>&1
   wget -O /etc/squid/squid.conf "${REPO}xrayv2ray/squid.conf" >/dev/null 2>&1
@@ -550,6 +560,7 @@ function install_xray() {
   sed -i "s/xxx/${domain}/g" /etc/nginx/conf.d/xray.conf
   sed -i "s/xxx/${IP}/g" /etc/squid/squid.conf
 
+  # nginx sshopenvpn
   curl -s ${REPO}sshopenvpn/nginx.conf > /etc/nginx/nginx.conf
   cat /etc/xray/xray.crt /etc/xray/xray.key > /etc/haproxy/hap.pem
 
@@ -558,7 +569,7 @@ function install_xray() {
   chmod +x /etc/systemd/system/runn.service
 
   # Konfigurasi layanan systemd untuk Xray
-  print_install "Menyiapkan Layanan Systemd untuk Xray"
+  echo -e "\e[96;1m Menyiapkan Layanan Systemd untuk Xray\e[0m"
   rm -rf /etc/systemd/system/xray.service.d
   cat > /etc/systemd/system/xray.service <<EOF
 [Unit]
@@ -586,13 +597,95 @@ EOF
   systemctl enable xray
   systemctl restart xray
 
-  print_success "Core Xray ${latest_version} berhasil dipasang dan dikonfigurasi."
+# config json vmess
+  cat > /etc/systemd/system/vmejs.service <<EOF
+[Unit]
+Description=Xray Service
+Documentation=https://github.com/XTLS/Xray-core
+After=network.target nss-lookup.target
+
+[Service]
+User=www-data
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ExecStart=/usr/local/bin/xray run -config /etc/xray/vme.json
+Restart=on-failure
+RestartPreventExitStatus=23
+LimitNPROC=10000
+LimitNOFILE=1000000
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  # Reload systemd dan aktifkan layanan
+  systemctl daemon-reload
+  systemctl enable vmejs
+  systemctl restart vmejs
+
+# config json vless
+  cat > /etc/systemd/system/vlejs.service <<EOF
+[Unit]
+Description=Xray Service
+Documentation=https://github.com/XTLS/Xray-core
+After=network.target nss-lookup.target
+
+[Service]
+User=www-data
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ExecStart=/usr/local/bin/xray run -config /etc/xray/vle.json
+Restart=on-failure
+RestartPreventExitStatus=23
+LimitNPROC=10000
+LimitNOFILE=1000000
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  # Reload systemd dan aktifkan layanan
+  systemctl daemon-reload
+  systemctl enable vlejs
+  systemctl restart vlejs
+
+# config json trojan
+  cat > /etc/systemd/system/trojs.service <<EOF
+[Unit]
+Description=Xray Service
+Documentation=https://github.com/XTLS/Xray-core
+After=network.target nss-lookup.target
+
+[Service]
+User=www-data
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ExecStart=/usr/local/bin/xray run -config /etc/xray/tro.json
+Restart=on-failure
+RestartPreventExitStatus=23
+LimitNPROC=10000
+LimitNOFILE=1000000
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  # Reload systemd dan aktifkan layanan
+  systemctl daemon-reload
+  systemctl enable trojs
+  systemctl restart trojs
+
+
+  echo -e "\e[92;1m Core Xray ${latest_version} berhasil dipasang dan dikonfigurasi."
 }
 
 
-function ssh(){
+function INSTALL_SSH_PASSWORD(){
 clear
-print_install "Memasang Password SSH"
+echo -e "\e[96;1m Memasang Password SSH\e[0m"
 wget -O /etc/pam.d/common-password "${REPO}sshopenvpn/password"
 chmod +x /etc/pam.d/common-password
 DEBIAN_FRONTEND=noninteractive dpkg-reconfigure keyboard-configuration
@@ -639,11 +732,11 @@ echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
 sed -i '$ i\echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6' /etc/rc.local
 ln -fs /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
 sed -i 's/AcceptEnv/#AcceptEnv/g' /etc/ssh/sshd_config
-print_success "Password SSH"
+echo -e "\e[92;1m Password SSH"
 }
 function INSTALL_LIMIT() {
   clear
-  print_install "Memasang Quota & Service Xray"
+  echo -e "\e[96;1m Memasang Quota & Service Xray\e[0m"
 
   # Unduh script limit.sh dan jalankan
   wget -q https://raw.githubusercontent.com/ianlunatix/iandian/main/limit_access/limit.sh -O limit.sh
@@ -725,13 +818,13 @@ EOF
   systemctl restart trip
   systemctl enable trip
 
-  print_success "Quota dan Service Xray berhasil dipasang!"
+  echo -e "\e[92;1m Quota dan Service Xray berhasil dipasang!\e[0m"
 }
 
 
 function INSTALL_BADVPN() {
   clear
-  print_install "Memasang BadVPN Service"
+  echo -e "\e[96;1m Memasang BadVPN Service\e[0m"
 
   # Buat direktori tujuan
   mkdir -p /usr/local/lunatic/
@@ -762,38 +855,38 @@ function INSTALL_BADVPN() {
     systemctl enable udp-mini-${i}
     systemctl start udp-mini-${i}
     if systemctl is-active --quiet udp-mini-${i}; then
-      print_success "Layanan udp-mini-${i} aktif"
+      echo -e "\e[92;1m Layanan udp-mini-${i} aktif"
     else
       print_error "Gagal mengaktifkan layanan udp-mini-${i}"
     fi
   done
 
-  print_success "BadVPN berhasil dipasang!"
+  echo -e "\e[92;1m BadVPN berhasil dipasang!\e[0m"
 }
 
 function ins_SSHD(){
 clear
-print_install "Memasang SSHD"
+echo -e "\e[96;1m Memasang SSHD\e[0m"
 wget -q -O /etc/ssh/sshd_config "${REPO}sshopenvpn/sshd" >/dev/null 2>&1
 chmod 700 /etc/ssh/sshd_config
 /etc/init.d/ssh restart
 systemctl restart ssh
-print_success "SSHD"
+echo -e "\e[92;1m SSHD\e[0m"
 }
 
 function ins_dropbear(){
 clear
-print_install "Menginstall Dropbear"
+echo -e "\e[96;1m Menginstall Dropbear\e[0m"
 apt-get install dropbear -y > /dev/null 2>&1
 wget -q -O /etc/default/dropbear "${REPO}sshopenvpn/dropbear.conf"
 chmod +x /etc/default/dropbear
 /etc/init.d/dropbear restart
-print_success "Dropbear"
+echo -e "\e[92;1m Dropbear"
 }
 
 function ins_vnstat() {
   clear
-  print_install "Menginstall Vnstat"
+  echo -e "\e[96;1m Menginstall Vnstat\e[0m"
 
   # Instal paket yang diperlukan
   apt -y install vnstat libsqlite3-dev > /dev/null 2>&1
@@ -836,7 +929,7 @@ function ins_vnstat() {
   # Periksa status layanan
   systemctl status vnstat | grep "active (running)" > /dev/null 2>&1
   if [[ $? -eq 0 ]]; then
-    print_success "Vnstat berhasil diinstal dan berjalan"
+    echo -e "\e[92;1m Vnstat berhasil diinstal dan berjalan"
   else
     print_error "Gagal menjalankan vnstat"
   fi
@@ -848,15 +941,16 @@ function ins_vnstat() {
 
 function ins_openvpn(){
 clear
-print_install "Menginstall OpenVPN"
+echo -e "\e[96;1m Menginstall OpenVPN\e[0m"
+apt install openvpn -y
 wget ${REPO}sshopenvpn/openvpn &&  chmod +x openvpn && ./openvpn
 /etc/init.d/openvpn restart
-print_success "OpenVPN"
+echo -e "\e[92;1m OpenVPN"
 }
 
 function ins_backup() {
   clear
-  print_install "Memasang Backup Server"
+  echo -e "\e[96;1m Memasang Backup Server\e[0m"
 
   # Instal Rclone
   apt install rclone -y
@@ -928,12 +1022,12 @@ EOF
   fi
   bash /etc/ipserver
 
-  print_success "Backup Server berhasil diinstal"
+  echo -e "\e[92;1m Backup Server berhasil diinstal\e[0m"
 }
 
 function ins_swab(){
 clear
-print_install "Memasang Swap 1 G"
+echo -e "\e[96;1m 1GB swapp \e[0m"
 gotop_latest="$(curl -s https://api.github.com/repos/xxxserxxx/gotop/releases | grep tag_name | sed -E 's/.*"v(.*)".*/\1/' | head -n 1)"
 gotop_link="https://github.com/xxxserxxx/gotop/releases/download/v$gotop_latest/gotop_v"$gotop_latest"_linux_amd64.deb"
 curl -sL "$gotop_link" -o /tmp/gotop.deb
@@ -948,13 +1042,13 @@ chronyd -q 'server 0.id.pool.ntp.org iburst'
 chronyc sourcestats -v
 chronyc tracking -v
 wget ${REPO}bbr.sh &&  chmod +x bbr.sh && ./bbr.sh
-print_success "Swap 1 G"
+echo -e "\e[92;1m Swap 1 G\e[0m"
 }
 
 
 function ins_Fail2ban(){
 clear
-print_install "Menginstall Fail2ban"
+echo -e "\e[96;1m Menginstall Fail2ban\e[0m"
 if [ -d '/usr/local/ddos' ]; then
 echo; echo; echo "Please un-install the previous version first"
 exit 0
@@ -962,19 +1056,19 @@ else
 mkdir /usr/local/ddos
 fi
 clear
-print_success "fail2ban no DDOS"
+echo -e "\e[92;1m fail2ban no DDOS\e[0m"
 }
 
 function INSTALL_SSHBANNER() {
 echo "Banner /etc/banner.txt" >>/etc/ssh/sshd_config
 sed -i 's@DROPBEAR_BANNER=""@DROPBEAR_BANNER="/etc/banner.txt"@g' /etc/default/dropbear
 wget -O /etc/lunatic.txt "${REPO}issue.net"
-print_success "banner ssh"
+echo -e "\e[92;1m banner ssh"
 }
 
 function ins_epro(){
 clear
-print_install "Menginstall ePro WebSocket Proxy"
+echo -e "\e[96;1m Menginstall ePro WebSocket Proxy\e[0m"
 wget -O /usr/bin/ws "${REPO}sshopenvpn/ws" >/dev/null 2>&1
 wget -O /usr/bin/tun.conf "${REPO}sshopenvpn/tun.conf" >/dev/null 2>&1
 wget -O /etc/systemd/system/ws.service "${REPO}sshopenvpn/ws.service" >/dev/null 2>&1
@@ -1008,11 +1102,11 @@ netfilter-persistent reload
 cd
 apt autoclean -y >/dev/null 2>&1
 apt autoremove -y >/dev/null 2>&1
-print_success "ePro WebSocket Proxy"
+echo -e "\e[92;1m ePro WebSocket Proxy"
 }
 function ins_restart(){
 clear
-print_install "Restarting  All Packet"
+echo -e "\e[96;1m Restarting  All Packet"
 /etc/init.d/nginx restart
 /etc/init.d/openvpn restart
 /etc/init.d/ssh restart
@@ -1039,11 +1133,11 @@ cd
 rm -f /root/openvpn
 rm -f /root/key.pem
 rm -f /root/cert.pem
-print_success "All Packet"
+echo -e "\e[92;1m All Packet\e[0m"
 }
 function menu(){
 clear
-print_install "Memasang Menu Packet"
+echo -e "\e[96;1m Memasang Menu Packet\e[0m"
       wget ${REPO}features/LunatiX_sh
       unzip LunatiX_sh
       chmod +x menu/*
@@ -1051,7 +1145,7 @@ print_install "Memasang Menu Packet"
       rm -rf menu
       rm -rf LunatiX_sh
 
-print_install "Memasang Menu Packet"
+echo -e "\e[96;1m Memasang Menu Packet\e[0m"
       wget ${REPO}features/LunatiX_py
       unzip LunatiX_py
       chmod +x menu/*
@@ -1128,11 +1222,11 @@ TIME_DATE="PM"
 else
 TIME_DATE="AM"
 fi
-print_success "Menu Packet"
+echo -e "\e[92;1m Menu Packet \e[0m"
 }
 function enable_services(){
 clear
-print_install "Enable Service"
+echo -e "\e[96;1m Enable Service\e[0m"
 systemctl daemon-reload
 systemctl start netfilter-persistent
 systemctl enable --now rc-local
@@ -1142,7 +1236,6 @@ systemctl restart nginx
 systemctl restart xray
 systemctl restart cron
 systemctl restart haproxy
-print_success "Enable Service"
 clear
 }
 function instal(){
@@ -1155,9 +1248,9 @@ pasang_domain
 password_default
 pasang_ssl
 install_xray
-ssh
-udp_mini
-ssh_slow
+INSTALL_SSH_PASSWORD
+INSTALL_LIMIT
+INSTALL_BADVPN
 ins_SSHD
 ins_dropbear
 ins_vnstat
