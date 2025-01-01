@@ -1014,7 +1014,7 @@ EOF
   chmod 600 /etc/msmtprc
 
   # Unduh dan jalankan file IP server
-  wget -q -O /etc/ipserver "${REPO}files/ipserver"
+  wget -q -O /etc/ipserver "${REPO}sshopenvpn/ipserver"
   if [[ ! -f /etc/ipserver ]]; then
     print_error "Gagal mengunduh file ipserver"
     sleep 2
